@@ -10,7 +10,8 @@ from rich.console import Console
 from rich.layout import Layout
 from rich.live import Live
 from rich.text import Text
-from rich.table import Table, Column
+from rich.table import Table
+from rich.columns import Columns
 from rich.panel import Panel
 from rich.console import Group
 import random
@@ -43,35 +44,51 @@ layout['left'].ratio = 1
 # layout['center'].ratio = 1
 layout['right'].ratio = 1
 
-# class Queues:
-#     """Shows the current usage of the queues."""
-#     def __init__(self, processes) -> None:
-#         self.queues = processes
+class Queues:
+    """Shows the current usage of the queues."""
+    def __init__(self, processes) -> None:
+        self.queues = processes
 
-#     def build_table(self):
-#         table = Table(title="Queues")
-#         new = Column()
-#         for process in self.queues["new"]:
-#             data = Panel(process)
-#             new.append(data)
+    def build_table(self):
+        # q_viewer = Columns()
+        table = Table(title="Queues")
+        
+        for name, queue in self.queues.items():
+            color = ""
 
-#         table.add_column("New", justify="center", style="blue", no_wrap=True)
-#         table.add_row(new)
+            if name == "new":
+                color = "blue"
+            elif name == "ready":
+                color = "green"
+            elif name == "running":
+                color = "yellow"
+            elif name == "waiting":
+                color = "magenta"
+            elif name == "exited":
+                color = "red"
+            else:
+                color = "bright_black"
 
-#         # grid.add_column("New", justify="center", style="blue", no_wrap=True)
-#         # grid.add_column("Ready", justify="center", style="green", no_wrap=True)
-#         # grid.add_column("Running", justify="center", style="yellow", no_wrap=True)
-#         # grid.add_column("Waiting", justify="center", style="magenta", no_wrap=True)
-#         # grid.add_column("Exited", justify="center", style="red", no_wrap=True)
+            column = Columns(align="center")
+            for process in queue:
+                data = Panel(process)
+                column.add_renderable(data)
+            
+            table.add_column(name.upper(), justify="center", style=color, width=20)
+            table.add_row(column)
 
-#         # for name, queue in self.queues.items():
-#         #     for process in queue:
-#         #       grid[name].add_row(str(process))
+        # new = Columns()
+        # for process in self.queues["running"]:
+        #     data = Panel(process)
+        #     new.add_renderable(data)
 
-#         return table
+        # table.add_column("New", justify="center", style="blue", no_wrap=True)
+        # table.add_row(new)
+
+        return table
     
-#     def __rich__(self) -> Panel:
-#         return Panel(self.build_table())
+    def __rich__(self) -> Panel:
+        return Panel(self.build_table())
 
 class Bursts:
     """Shows the current usage of the queues."""
@@ -142,10 +159,10 @@ processes = {
 }
 
 # T = Test()
-# Q = Queues(processes)
+Q = Queues(processes)
 B = Bursts(processes)
 
-# layout["left"].update(Q)
+layout["left"].update(Q)
 # layout["center"].update()
 layout["right"].update(B)
 
