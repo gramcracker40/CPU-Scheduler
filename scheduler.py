@@ -1,5 +1,6 @@
 from datetime import datetime
 import json
+import time
 
 class SysClock:
     def __init__(self):
@@ -196,6 +197,7 @@ class CPU:
             self.load_ready()
             self.IO_tick()
             self.CPU_tick()
+            # time.sleep(0.5)
             
 
             
@@ -210,7 +212,7 @@ class CPU:
 
 
 if __name__=='__main__':
-    sim = CPU(cores=2)
+    sim = CPU(cores=1)
     sim.readData("processes.dat")
     sim.FCFS()
     print(sim)
