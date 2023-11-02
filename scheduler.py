@@ -49,28 +49,42 @@ CPU Burst: {self.cpuBurst}\nIO Burst: {self.ioBurst}\nBursts: {self.bursts}\n\n"
         return int(self.bursts[self.currBurstIndex])
 
 
-class CPU:
+class Scheduler:
     '''
-    Handles the life cycle of the simulation
-    The CPU can run on either a FCFS first come first serve basis, or a Round Robin approach
+    Handles the life cycle of the CPU scheduling simulation
+    
+    The CPU Scheduler can run on either a 
+        FCFS first come first serve basis
+        a Round Robin approach 
+        or a priority based approach
 
-    The simulated CPU has 4 cores by default but can be changed. 
-    This will proportionally affect the 'processing power' of the simulated CPU.
+    The simulated CPU has 2 cores by default but can be changed. 
+    the number of cores is the allowed number of processes in the running queue at once. 
+    
+    Specify the number of io devices to allow in the IO queue 
+    and be decremented by 1 on their ioBurst every clock tick
+
+    self.new --> the 'new' processes, based off the PCB's arrival time.
+    self.ready --> the 'ready' processes, added by load_ready according to the number of cores
+    
     '''
-    def __init__(self, cores:int=4):
+    def __init__(self, cores:int=2, io_devices:int=2):
         self.clock = SysClock()
         self.cores = cores
+        self.io_devices = io_devices
         self.num_processes = 0
         self.new = []
         self.ready = []
         self.running = []
         self.waiting = []
+        self.IO = []
         self.exited = []
 
+    
     def load_ready(self):
         '''
         if there exists processes in 'ready', and there are open slots in 'running'
-            fill the 'running' queue up to the number of cores in the CPU.
+            fill the 'running' queue up to the number of available 'cores' in the CPU.
         '''
         diff = self.cores - len(self.running)
         
@@ -80,6 +94,13 @@ class CPU:
                     process = self.ready.pop(0)  # Remove the first process from the ready queue
                     self.running.append(process)
                 diff -= 1
+
+    
+    def load_waiting(self):
+        '''
+        loads the PCBs that are in the 'waiting' queue in to the 'IO' queue
+        '''
+    
                     
     def IO_tick(self):
         '''
@@ -212,7 +233,7 @@ class CPU:
 
 
 if __name__=='__main__':
-    sim = CPU(cores=1)
-    sim.readData("processes.dat")
-    sim.FCFS()
-    print(sim)
+    scheduler = Scheduler(cores=1)
+    scheduler.readData("processes.dat")
+    scheduler.FCFS()
+    print(scheduler.exited)
