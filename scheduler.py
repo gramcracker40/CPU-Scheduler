@@ -123,10 +123,10 @@ class Scheduler:
             process.incrementWaitingTime()
 
         if diff > 0:
-            while diff > 0 and self.ready:
-                if len(self.waiting) >= 1:
-                    process = self.waiting.pop(0)  # Remove the first process from the ready queue
-                    self.running.append(process)
+            while diff > 0 and self.waiting:       # if there is a difference
+                if len(self.waiting) >= 1:         # if there are any waiting
+                    process = self.waiting.pop(0)  # Remove the first process from the waiting queue
+                    self.IO.append(process)        # add the process to the IO queue
                 diff -= 1
 
 
@@ -142,7 +142,7 @@ class Scheduler:
         '''
         to_remove = []
         removed = False
-        for process in self.waiting:
+        for process in self.IO:
             process.decrementIoBurst()
 
             if process.ioBurst == 0:
@@ -154,7 +154,7 @@ class Scheduler:
     
         if removed: # rearrange the queues
             # remove any processes that were marked for removal.
-            self.waiting = [x for x in self.waiting if x.pid not in to_remove]   
+            self.IO = [x for x in self.IO if x.pid not in to_remove]   
             
 
     def CPU_tick(self):
