@@ -5,7 +5,7 @@ Demonstrates a dynamic Layout
 
 from datetime import datetime
 from time import sleep
-from rich.align import Align
+# from rich.align import Align
 from rich.console import Console
 from rich.layout import Layout
 from rich.live import Live
@@ -36,7 +36,7 @@ layout["main"].split(
     Layout(name="left"), 
     Layout(name="center"), 
     Layout(name="right"),
-    #direction="horizontal"
+    # direction="horizontal"
 )
 
 layout['left'].ratio = 1
