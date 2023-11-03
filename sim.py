@@ -21,12 +21,7 @@ def get_proc():
     """
     return f"P{random.randint(1,50)}"
 
-# def get_burst_time_remaining(job):
-
-#     for burst in job.b:
-
-
-def make_row(name, queue):
+def make_row(queueName, queue):
     """ This function builds a row with 2 columns. The queue name on the left, and a random number of processes on the right.
         Your job would be to replace this function with something that pulls values out of your pcb in order to show in whichever queue.
 
