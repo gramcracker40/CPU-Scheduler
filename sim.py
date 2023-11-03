@@ -5,6 +5,8 @@ import random
 import time
 from rich.progress import SpinnerColumn
 from rich.console import Console
+from rich import print
+from scheduler import PCB
 
 # Gets the width of the console so I can size each column as a percentage so
 # the width stays static looking and the "processes" can grow and shrink.
@@ -32,7 +34,7 @@ def make_row(name, queue):
     processes = ""
     for job in queue:
         #processes += str(f"[on green][bold][[/bold][red]{get_proc()}[/red] {get_num()}[bold]][/bold][/on green] ")
-        processes += str(f"[bold][[/bold][bold blue]{job.pid} {job.remainingBurst}[/bold blue][bold]][/bold]")
+        processes += str(f"[bold][[/bold][bold blue]{job.pid} {random.randint(1, 99)}[/bold blue][bold]][/bold]")
     return [name, processes]
 
 def generate_table(new, ready, running, waiting, IO, exited) -> Table:
@@ -63,11 +65,31 @@ This is how "rich" looks like its animated. The `Live` method keeps calling
 the `generate_table()` function 40 times in this case with a small sleep in
 between. I haven't experimented with the refresh_per_second value, so I don't know.
 """
-with Live(generate_table(), refresh_per_second=4) as live:
-    for _ in range(40):
-        time.sleep(0.4)
-        live.update(generate_table())
+# with Live(generate_table(), refresh_per_second=4) as live:
+#     for _ in range(40):
+#         time.sleep(0.4)
+#         live.update(generate_table())
 
 def RenderScreen(new, ready, running, waiting, IO, exited, s_time = 0):
-    generate_table(new, ready, running, waiting, IO, exited)
+    table = generate_table(new, ready, running, waiting, IO, exited)
+    print(table)
     time.sleep(s_time)
+
+if __name__ == "__main__":
+    b1 = [10, 16, 10, 17, 9, 15, 8, 15, 10, 15, 9, 15, 10, 17, 11, 15, 8, 17, 10]
+    b2 = [11, 16, 9, 16, 10, 15, 8, 16, 8, 17, 10, 15, 11, 17, 8, 17, 11, 16, 8]
+    b3 = [9, 16, 10, 15, 11, 16, 10, 16, 11, 15, 10, 15, 10, 17, 11, 16, 10]
+    b4 = [9, 16, 9, 15, 8, 15, 9, 15, 9, 16, 10, 15, 10, 16, 8, 17, 8, 16, 9, 17, 8, 16, 11]
+    p1 = PCB(0, "p2", b1, 0)
+    p2 = PCB(1, "p1", b2, 0)
+    p3 = PCB(2, "p3", b3, 1)
+    p4 = PCB(3, "p1", b4, 1)
+
+    new = [p3, p4]
+    ready = []
+    running = [p2]
+    waiting = []
+    io = [p1]
+    exited = []
+
+    RenderScreen(new, ready, running, waiting, io, exited, 1)

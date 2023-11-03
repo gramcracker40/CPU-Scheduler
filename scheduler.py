@@ -1,7 +1,7 @@
 from datetime import datetime
 import json
 import time
-from sim import RenderScreen
+# from sim import RenderScreen
 
 class SysClock:
     def __init__(self):
@@ -245,7 +245,9 @@ class Scheduler:
         self.total_processed = 0
         start = self.clock.time()
         
-        while self.total_processed + 1 <= total_processes:  
+        while self.total_processed + 1 <= total_processes:
+            # RenderScreen(self.new, self.ready, self.running, self.waiting, self.IO, self.exited, 1)
+
             self.clock.tick()
             # decrements the cpuBurst of the PCBs in 'running' by 1
             # uses a fcfs rule set to determine how to run the PCBs
@@ -259,7 +261,6 @@ class Scheduler:
   
             # time.sleep(0.5)
 
-            RenderScreen(self.new, self.ready, self.running, self.waiting, self.IO, self.exited, 1)
             
             # print(f"\n\n\nReady: {self.ready}")
             # print(f"\n\n\nRunning: {self.running}")
