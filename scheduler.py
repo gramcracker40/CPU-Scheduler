@@ -32,8 +32,8 @@ class PCB:
         self.ioQueueTime = 0
     
     def __repr__(self):
-        return f"""pid: {self.pid}\ntotal bursts: {self.totalBursts}\ncurrent burst index: {self.currBurstIndex}
-CPU Burst: {self.cpuBurst}\nIO Burst: {self.ioBurst}\nBursts: {self.bursts}\n\n"""
+        return f"""\npid: {self.pid}\ntotal bursts: {self.totalBursts}\ncurrent burst index: {self.currBurstIndex}
+CPU Burst: {self.cpuBurst}\nIO Burst: {self.ioBurst}\nBursts: {self.bursts}\nArrival Time: {self.arrivalTime}\n"""
 
     def decrementCpuBurst(self):
         self.cpuBurst -= 1
@@ -83,6 +83,7 @@ class Scheduler:
 
         self.num_processes = 0
         self.process_turnover_time = 0
+        self.pcb_arrivals = {}
         
         self.new = []
         self.ready = []
@@ -91,6 +92,14 @@ class Scheduler:
         self.IO = []
         self.exited = []
 
+
+    def load_new(self, clock_tick:int):
+        '''
+        load the new queue according to the current clock tick.
+        '''
+        if clock_tick in self.pcb_arrivals:
+            for pcb in self.pcb_arrivals[clock_tick]:
+                self.new.append(pcb)
     
     def load_ready(self):
         '''
@@ -157,17 +166,16 @@ class Scheduler:
             self.IO = [x for x in self.IO if x.pid not in to_remove]   
             
 
-    def CPU_tick(self):
+    def FCFS_CPU_tick(self):
         '''
-        handles a single decrement of cpuBurst for the 'running' queue
+        handles a single decrement of cpuBurst for the 'running' queue while running FCFS
         A single clock cycle for the CPU component. Determines if processes
         need to be placed in waiting for their next ioBurst, or if they need
         to be placed in exited because they are done processing. 
 
 
         '''
-        to_remove = []
-        removed = False
+        removed = []
 
         for process in self.running:
             process.decrementCpuBurst()
@@ -181,25 +189,13 @@ class Scheduler:
                 else: # if it is the last burst
                     self.exited.append(process)
                     self.total_processed += 1
-                
-                to_remove.append(process.pid)
-                removed=True
+                    
+                removed.append(process.pid)
              
         if removed: # rearrange the queues
-            # remove any processes that were marked for removal.
-            self.running = [x for x in self.running if x.pid not in to_remove]   
-            
-            #   add the same number of PCB's removed from 'running', 
-            #      from 'ready' into 'running'
-            
-            for i in range(len(to_remove)):
-                if i + 1 < len(self.ready):
-                    self.running.append(self.ready[i])
-            
-            # remove the old ones from ready seperately from where we add them.
-            for i in range(len(to_remove)):
-                if i + 1 < len(self.ready):
-                    del self.ready[i]
+                    # remove any processes from 'running' that were marked for removal.
+            self.running = [x for x in self.running if x.pid not in removed]   
+
     
     def readData(self, datfile):
         '''
@@ -210,15 +206,18 @@ class Scheduler:
         with open(datfile) as f:
             for process in f.read().split("\n"):
                 if len(process) > 0:
+                    self.num_processes += 1
                     parts = process.split(' ')
                     
                     arrival, pid = parts[0], parts[1]
                     priority, bursts = parts[2], parts[3:]
 
-                    self.new.append(PCB(pid, priority, bursts, arrival))
-
-            self.num_processes += len(self.new)
-        print(f"self.new\n{self.new}")
+                    if arrival in self.pcb_arrivals:
+                        self.pcb_arrivals[arrival].append(PCB(pid, priority, bursts, arrival))
+                    else:
+                        self.pcb_arrivals[arrival] = [PCB(pid, priority, bursts, arrival)]
+    
+        print(f"self.pcb_arrivals\n{self.pcb_arrivals}")
 
 
     def FCFS(self):
@@ -244,35 +243,33 @@ class Scheduler:
         
         self.total_processed = 0
         start = self.clock.time()
-        while self.total_processed + 1 <= total_processes:
+        
+        while self.total_processed + 1 <= total_processes:  
             self.clock.tick()
-            
             # decrements the cpuBurst of the PCBs in 'running' by 1
-            self.CPU_tick()
-
+            # uses a fcfs rule set to determine how to run the PCBs
+            self.FCFS_CPU_tick()
             # loads PCBs from 'ready' into 'running' based off the number of 'cores'
             self.load_ready()
-
             # decrements the ioBurst of the PCBs in 'IO' by 1
             self.IO_tick()
-
             # loads PCBs from 'waiting' into 'IO' based off the number of 'io_devices'
             self.load_waiting()
-  
-            # time.sleep(0.5)
+
+            # load the simulation using rich.
             
-            print(f"\n\n\nReady: {self.ready}")
-            print(f"\n\n\nRunning: {self.running}")
-            print(f"\n\n\nWaiting: {self.waiting}")
-            print(f"\n\n\nIO: {self.IO}")
-            print(f"\n\n\nExited: {self.exited}")
-            print(f"total_processed: {self.total_processed}")
+            # print(f"\n\n\nReady: {self.ready}")
+            # print(f"\n\n\nRunning: {self.running}")
+            # print(f"\n\n\nWaiting: {self.waiting}")
+            # print(f"\n\n\nIO: {self.IO}")
+            # print(f"\n\n\nExited: {self.exited}")
+            # print(f"total_processed: {self.total_processed}")
 
         print(f"total time: {self.clock.time() - start}")
 
 
 
 if __name__=='__main__':
-    scheduler = Scheduler(cores=1)
+    scheduler = Scheduler(cores=1, io_devices=1)
     scheduler.readData("processes.dat")
     scheduler.FCFS()
