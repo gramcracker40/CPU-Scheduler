@@ -1,6 +1,7 @@
 from datetime import datetime
 import json
 import time
+from sim import RenderScreen
 
 class SysClock:
     def __init__(self):
@@ -260,6 +261,8 @@ class Scheduler:
             self.load_waiting()
   
             # time.sleep(0.5)
+
+            RenderScreen(self.new, self.ready, self.running, self.waiting, self.IO, self.exited, 1)
             
             print(f"\n\n\nReady: {self.ready}")
             print(f"\n\n\nRunning: {self.running}")
