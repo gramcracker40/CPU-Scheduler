@@ -11,7 +11,6 @@ from rich.console import Console
 console = Console()
 terminal_width = console.width
 
-
 def get_num():
     """ Helper for make row
     """
