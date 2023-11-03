@@ -21,11 +21,13 @@ class PCB:
         self.priority = priority     # 0
         self.arrivalTime = at   
         self.totalBursts = len(bursts)
-        self.bursts = bursts    #9 16  9 15  8 15  9 15  9 16  10 15  10 16  8 17  8 16  9 17  8 16  11
+        self.bursts = [int(i) for i in bursts]    #9 16  9 15  8 15  9 15  9 16  10 15  10 16  8 17  8 16  9 17  8 16  11
+        self.totalBurstTime = sum(self.bursts)
+        self.remainingBurst = sum(self.bursts)
         self.currBurst = 'CPU'
         self.currBurstIndex = 0
-        self.cpuBurst = int(bursts[0])
-        self.ioBurst = int(bursts[1])
+        self.cpuBurst = bursts[0]
+        self.ioBurst = bursts[1]
         self.readyQueueTime = 0
         self.runningQueueTime = 0
         self.waitingQueueTime = 0
@@ -38,10 +40,12 @@ CPU Burst: {self.cpuBurst}\nIO Burst: {self.ioBurst}\nBursts: {self.bursts}\nArr
     def decrementCpuBurst(self):
         self.cpuBurst -= 1
         self.runningQueueTime += 1
+        self.remainingBurst -= 1
 
     def decrementIoBurst(self):
         self.ioBurst -= 1
         self.ioQueueTime += 1
+        self.remainingBurst -= 1
 
     def incrementReadyTime(self):
         self.readyQueueTime += 1
@@ -110,6 +114,11 @@ class Scheduler:
 
         for process in self.ready:
             process.incrementReadyTime()
+
+        # load the PCB from 'new' into 'ready'
+        for p in range(len(self.new)):
+            temp = self.new.pop(0)
+            self.ready.append(temp)
         
         if diff > 0:
             while diff > 0 and self.ready:
@@ -118,7 +127,6 @@ class Scheduler:
                     self.running.append(process)
                 diff -= 1
 
-    
     def load_waiting(self):
         '''
         loads the PCBs that are in the 'waiting' queue in to the 'IO' queue based on the number
@@ -138,8 +146,6 @@ class Scheduler:
                     self.IO.append(process)        # add the process to the IO queue
                 diff -= 1
 
-
-                    
     def IO_tick(self):
         '''
         tick all processes in IO bounds bursts by 1
@@ -196,6 +202,12 @@ class Scheduler:
                     # remove any processes from 'running' that were marked for removal.
             self.running = [x for x in self.running if x.pid not in removed]   
 
+    def get_total_new_processes(self):
+        '''
+        tallies up the total processes in self.pcb_arrivals
+        '''
+        return len([each for x in self.pcb_arrivals for each in self.pcb_arrivals[x]])
+    
     
     def readData(self, datfile):
         '''
@@ -227,11 +239,13 @@ class Scheduler:
         does not switch until the cpu burst is complete. 
         running state holds number of cores set in __init__
         '''
-        total_processes = len(self.new)
-        # set the new processes to the ready queue. 
-        self.new.sort(key=lambda x: x.arrivalTime)
-        self.ready = self.new
-        self.new = []
+        total_processes = self.get_total_new_processes()
+        print(f"Total processes: {total_processes}")
+
+        # # set the new processes to the ready queue. 
+        # self.new.sort(key=lambda x: x.arrivalTime)
+        # self.ready = self.new
+        # self.new = []
 
         print(f"Ready: {self.ready}")
         # set the number of running processes to the number of cores available. 
@@ -244,28 +258,38 @@ class Scheduler:
         self.total_processed = 0
         start = self.clock.time()
         
+        # load the newly arrived processes
+        self.load_new(self.clock.time())
         while self.total_processed + 1 <= total_processes:  
             self.clock.tick()
-            # decrements the cpuBurst of the PCBs in 'running' by 1
-            # uses a fcfs rule set to determine how to run the PCBs
-            self.FCFS_CPU_tick()
+
             # loads PCBs from 'ready' into 'running' based off the number of 'cores'
             self.load_ready()
-            # decrements the ioBurst of the PCBs in 'IO' by 1
-            self.IO_tick()
+
             # loads PCBs from 'waiting' into 'IO' based off the number of 'io_devices'
             self.load_waiting()
 
+            # decrements the cpuBurst of the PCBs in 'running' by 1
+            # uses a fcfs rule set to determine how to run the PCBs
+            self.FCFS_CPU_tick()
+
+            # decrements the ioBurst of the PCBs in 'IO' by 1
+            self.IO_tick()
+            
+
             # load the simulation using rich.
             
-            # print(f"\n\n\nReady: {self.ready}")
-            # print(f"\n\n\nRunning: {self.running}")
-            # print(f"\n\n\nWaiting: {self.waiting}")
-            # print(f"\n\n\nIO: {self.IO}")
-            # print(f"\n\n\nExited: {self.exited}")
-            # print(f"total_processed: {self.total_processed}")
+            print(f"\n\n\nReady: {self.ready}")
+            print(f"\n\n\nRunning: {self.running}")
+            print(f"\n\n\nWaiting: {self.waiting}")
+            print(f"\n\n\nIO: {self.IO}")
+            print(f"\n\n\nExited: {self.exited}")
+            print(f"total_processed: {self.total_processed}")
 
         print(f"total time: {self.clock.time() - start}")
+
+        # reset pcb_arrivals to allow for more simulations
+        self.pcb_arrivals = {}
 
 
 
