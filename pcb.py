@@ -20,6 +20,8 @@ class PCB:
         self.runningQueueTime = 0
         self.waitingQueueTime = 0
         self.ioQueueTime = 0
+        #need a var for tracking when the pcb enters the exit que
+        self.timeExited = 0
     
     def __repr__(self):
         return f"""\npid: {self.pid}\ntotal bursts: {self.totalBursts}\ncurrent burst index: {self.currBurstIndex}

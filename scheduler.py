@@ -3,6 +3,7 @@ import json
 import time
 from rich.live import Live
 from sim_viewer import RenderScreen
+from sim_viewer import RenderStats
 from pcb import PCB
 
 # from sim import RenderScreen
@@ -95,8 +96,8 @@ class Scheduler:
         pass the Live object from Rich app so the update can occur.
         '''
         self.messages.insert(0, {"message": message, "style": style})
-        live.update(RenderScreen(self.new, self.ready, self.running, 
-                                self.waiting, self.IO, self.exited, tick, self.messages))
+        # live.update(RenderScreen(self.new, self.ready, self.running, 
+        #                         self.waiting, self.IO, self.exited, tick, self.messages))
 
     def load_new(self, clock_tick:int, live:Live):
         '''
@@ -121,9 +122,6 @@ class Scheduler:
         if there exists processes in 'ready', and there are open slots in 'running'
             fill the 'running' queue up to the number of available 'cores' in the CPU.
         '''
-        # increment the time in ready by one.
-        for process in self.ready:
-            process.incrementReadyTime()
 
         #print(f"{self.clock.time()}: ")
 
@@ -147,6 +145,10 @@ class Scheduler:
                     self.running.append(process)
                     
                 diff -= 1
+
+        # increment the time in ready by one.
+        for process in self.ready:
+            process.incrementReadyTime()
 
     def load_waiting(self, clock_tick:int, live:Live):
         '''
@@ -221,12 +223,13 @@ class Scheduler:
                     process.ioBurst = process.getCurrentBurstTime()
                     self.waiting.append(process)
                 else: # if it is the last burst
-                    process.processTime = (process.readyQueueTime + process.runningQueueTime \
+                    process.processTime = (process.readyQueueTime + process.runningQueueTime 
                                     + process.waitingQueueTime + process.ioQueueTime) - process.arrivalTime
                     self.update_messages(
                         f"{clock_tick}, job {process.pid} exited. Total completion time --> {process.processTime}",
                         live, clock_tick, style="red"
                     )
+                    process.timeExited = clock_tick
                     self.exited.append(process)
                     self.total_processed += 1
                     
@@ -260,7 +263,7 @@ class Scheduler:
                 self.IO_tick()
                 self.load_waiting(tick, live)
                 
-                time.sleep(0.1)
+                time.sleep(0.01)
 
                 self.clock.tick()
                 # update the simulation.
@@ -270,6 +273,7 @@ class Scheduler:
 
         end = self.clock.time()
         print(f"total time: {end - start}")
+        RenderStats(self.exited)
 
 
 

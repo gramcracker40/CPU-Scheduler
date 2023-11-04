@@ -25,6 +25,9 @@ def make_row(name, queue):
     for job in queue:
         #processes += str(f"[on green][bold][[/bold][red]{get_proc()}[/red] {get_num()}[bold]][/bold][/on green] ")
         processes += str(f"[bold][[/bold][bold blue]{job.pid} {job.remainingBurst}[/bold blue][bold]][/bold]")
+
+    # text = Text(processes)
+    # text.rstrip_end(30)
     return [name, processes]
 
 class Queues:
@@ -46,9 +49,9 @@ class Queues:
         - You will probably have to pass in your queues or put this in a class to generate your own table .... or don't. 
         """
         # Create the table
-        table = Table(show_header=False)
+        table = Table(show_header=False, padding=(1))
         #table.add_column("Queue", style="bold yellow on blue dim", width=int(terminal_width*.1))
-        table.add_column("Queue", style="bold red", width=int(terminal_width*.1))
+        table.add_column("Queue", style="bold red", width=int(terminal_width*.2))
         table.add_column("Processes", width=int(terminal_width*.9))
         table.add_row(*make_row("New", self.new), end_section=True)
         table.add_row(*make_row("Ready", self.ready), end_section=True)
@@ -89,6 +92,50 @@ class Messages:
 
     def __rich__(self):
         return Panel(self.generate_message_text(), title="Messages")
+    
+class JobStats:
+    def __init__(self, pcbs) -> None:
+        self.pcbs = pcbs
+
+    def create_row(self, pcb):
+        tat = pcb.timeExited - pcb.arrivalTime
+        return [str(pcb.pid), str(pcb.arrivalTime), str(tat), str(pcb.readyQueueTime), str(pcb.waitingQueueTime)]
+
+    def create_table(self) -> Table:
+        table = Table()
+        table.add_column("Job", style="bold yellow", width=int(terminal_width*.9))
+        table.add_column("ST", width=int(terminal_width*.9))
+        table.add_column("TAT", width=int(terminal_width*.9))
+        table.add_column("RWT", width=int(terminal_width*.9))
+        table.add_column("IWT", width=int(terminal_width*.9))
+        for pcb in self.pcbs:
+            table.add_row(*self.create_row(pcb), end_section=True)
+        return table
+
+    def __rich__(self) -> Panel:
+        return Panel(self.create_table(), title="Stats")
+
+class Stats:
+    def __init__(self, pcbs) -> None:
+        self.pcbs = pcbs
+
+    def create_row(self, pcb):
+        tat = pcb.timeExited - pcb.arrivalTime
+        return [str(pcb.pid), str(pcb.arrivalTime), str(tat), str(pcb.readyQueueTime), str(pcb.waitingQueueTime)]
+
+    def create_table(self) -> Table:
+        table = Table()
+        table.add_column("Job", style="bold blue", width=int(terminal_width*.9))
+        table.add_column("ST", width=int(terminal_width*.9))
+        table.add_column("TAT", width=int(terminal_width*.9))
+        table.add_column("RWT", width=int(terminal_width*.9))
+        table.add_column("IWT", width=int(terminal_width*.9))
+        for pcb in self.pcbs:
+            table.add_row(*self.create_row(pcb), end_section=True)
+        return table
+
+    def __rich__(self) -> Panel:
+        return Panel(self.create_table(), title="Stats")
 
 
 def RenderScreen(new, ready, running, waiting, IO, exited, clock_tick, messages, s_time = 0) -> Layout:
@@ -119,3 +166,9 @@ def RenderScreen(new, ready, running, waiting, IO, exited, clock_tick, messages,
     # print(table)
 
     return layout
+
+def RenderStats(exited):
+    job_stats = JobStats(exited)
+    # stats = Stats()
+    print(job_stats)
+    # print(stats)
