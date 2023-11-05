@@ -2,13 +2,12 @@ class PCB:
     '''
     process control block
     '''
-    def __init__(self,pid,priority,bursts,at):
+    def __init__(self,pid:int,priority:int,bursts:list,at:int):
         self.pid = pid     
         self.priority = priority     # 0
         self.arrivalTime = at   
         self.totalBursts = len(bursts)
         self.bursts = bursts    #9 16  9 15  8 15  9 15  9 16  10 15  10 16  8 17  8 16  9 17  8 16  11
-        
         self.totalBurstTime = sum(self.bursts)
         self.processTime = 0
         self.remainingBurst = self.totalBurstTime
@@ -20,6 +19,7 @@ class PCB:
         self.runningQueueTime = 0
         self.waitingQueueTime = 0
         self.ioQueueTime = 0
+        self.queueTime = 0
         #need a var for tracking when the pcb enters the exit que
         self.timeExited = 0
     
