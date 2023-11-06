@@ -188,7 +188,9 @@ class Scheduler:
                 if mode == "FCFS":
                     process = self.ready.pop(0)
                 elif mode == "PB":
-                    process = self.ready.pop(self.find_highest_priority(self.ready))
+                    highest = self.find_highest_priority(self.ready)
+                    if highest != -1:
+                        process = self.ready.pop(highest)
                 elif mode == "RR":
                     process = self.ready.pop(0)
                     self.time_slice_tracker[process.pid] = (clock_tick, "running")
@@ -350,8 +352,8 @@ class Scheduler:
                                          self.waiting, self.IO, self.exited, tick, self.messages))
         
         end = self.clock.time()
-        print(f"total time: {(end - start) - 1}")
-        RenderStats(self.exited)
+        # print(f"total time: {(end - start) - 1}")
+        RenderStats(self.exited, ((end - start) - 1), self.cores, self.io_devices, mode)
 
 
 if __name__=='__main__':
