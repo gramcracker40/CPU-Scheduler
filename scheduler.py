@@ -1,5 +1,5 @@
 from datetime import datetime
-import json
+import csv
 import time
 from rich.live import Live
 from sim_viewer import RenderScreen
@@ -54,6 +54,7 @@ class Scheduler:
         pcb_arrivals: format --> {0: [<PID obj-1>], 1: [<PID obj-2>, <PID obj-3>], 3: [<PID obj-4>]}
         '''
         try:
+            self.datfile = datfile
             with open(datfile) as f:
                 for process in f.read().split("\n"):
                     if len(process) > 0:
@@ -69,7 +70,26 @@ class Scheduler:
                             self.pcb_arrivals[arrival] = [PCB(pid, priority, bursts, arrival)]
         except FileNotFoundError as err: 
             print(f"Simulation ERR: File could not be found... ")
+
+    def saveRunInfo(self, csv_file:str=f"saved_run"):
+        '''
+        saves the run info in CSV format for viewance later. 
+        '''
+        with open(f"{csv_file}.csv", "w", newline="") as f:
+            csv_f = csv.writer(f)
+
+            # headers
+            csv_f.writerow(["pid", "arrivalTime", "priority", 
+                            "processTime", "timeExited", "readyQueueTime", 
+                            "waitQueueTime", "runningQueueTime", "IOQueueTime"])
             
+            # write the process results
+            for process in self.exited:
+                csv_f.writerow([process.pid, process.arrivalTime, process.priority, 
+                        process.processTime, process.timeExited, process.readyQueueTime, 
+                        process.waitingQueueTime, process.runningQueueTime, process.ioQueueTime])
+
+
     def get_total_new_processes(self):
         '''
         helper func

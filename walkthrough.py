@@ -15,7 +15,7 @@ commands = [
     "python sim.py test_data/IOL.dat --cpus 20 --ios 20 --sched=FCFS --speed=0.0001",
 
     # Round Robin examples
-    "python sim.py test_data/IOS.dat --cpus 1 --ios 1 --sched=RR --speed=0.05 --time_slice 3",
+    "python sim.py test_data/IOS.dat --cpus 1 --ios 1 --sched=RR --speed=0.01 --time_slice 3",
     "python sim.py test_data/CPUL.dat --cpus 20 --ios 20 --sched=RR --speed=0.001 --time_slice 8",
 
     # Priority based examples

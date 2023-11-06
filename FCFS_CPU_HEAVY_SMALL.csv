@@ -1,0 +1,4 @@
+pid,arrivalTime,priority,processTime,timeExited,readyQueueTime,waitQueueTime,runningQueueTime,IOQueueTime
+1,1,1,150,151,0,0,121,30
+0,0,5,157,157,0,0,129,29
+2,2,1,210,212,0,0,150,61

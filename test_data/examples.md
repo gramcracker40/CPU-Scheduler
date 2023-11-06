@@ -23,6 +23,6 @@ python sim.py test_data/CPUL.dat --cpus 20 --ios 20 --sched="RR" --speed=0.0001 
 python sim.py test_data/IOL.dat --cpus 20 --ios 20 --sched="RR" --speed=0.0001 --time_slice 15
 
 # Priority based examples
-python sim.py test_data/PrioSpreadXS.dat --cpus 1 --ios 1 --sched="PB" --speeda=0.75
+python sim.py test_data/PrioSpreadXS.dat --cpus 1 --ios 1 --sched="PB" --speed=0.75
 python sim.py test_data/PrioSpreadL.dat --cpus 24 --ios 30 --sched="PB" --speed=0.0001
 python sim.py test_data/PrioSpreadS.dat --cpus 2 --ios 2 --sched="PB" --speed=0.0001
