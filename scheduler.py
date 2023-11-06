@@ -53,20 +53,23 @@ class Scheduler:
 
         pcb_arrivals: format --> {0: [<PID obj-1>], 1: [<PID obj-2>, <PID obj-3>], 3: [<PID obj-4>]}
         '''
-        with open(datfile) as f:
-            for process in f.read().split("\n"):
-                if len(process) > 0:
-                    self.num_processes += 1
-                    parts = process.split(' ')
-                    
-                    arrival, pid = int(parts[0]), parts[1]
-                    priority, bursts = int(parts[2][1]), [int(i) for i in parts[3:]]
+        try:
+            with open(datfile) as f:
+                for process in f.read().split("\n"):
+                    if len(process) > 0:
+                        self.num_processes += 1
+                        parts = process.split(' ')
+                        
+                        arrival, pid = int(parts[0]), parts[1]
+                        priority, bursts = int(parts[2][1]), [int(i) for i in parts[3:]]
 
-                    if arrival in self.pcb_arrivals:
-                        self.pcb_arrivals[arrival].append(PCB(pid, priority, bursts, arrival))
-                    else:
-                        self.pcb_arrivals[arrival] = [PCB(pid, priority, bursts, arrival)]
-    
+                        if arrival in self.pcb_arrivals:
+                            self.pcb_arrivals[arrival].append(PCB(pid, priority, bursts, arrival))
+                        else:
+                            self.pcb_arrivals[arrival] = [PCB(pid, priority, bursts, arrival)]
+        except FileNotFoundError as err: 
+            print(f"Simulation ERR: File could not be found... ")
+            
     def get_total_new_processes(self):
         '''
         helper func
@@ -224,7 +227,7 @@ class Scheduler:
                     self.time_slice_tracker[process.pid] = (clock_tick, "io")
                 # update the message section
                 self.update_messages(
-                    f"{clock_tick}, job {process.pid} began running {process.ioBurst} IO bursts, {process.currBurstIndex}/{process.totalBursts}", 
+                    f"{clock_tick}, job {process.pid} priority {process.priority} began running {process.ioBurst} IO bursts, {process.currBurstIndex}/{process.totalBursts}", 
                     clock_tick, style="bright_magenta"
                 )
                 self.IO.append(process)        # add the process to the IO queue
@@ -289,7 +292,7 @@ class Scheduler:
                             + process.waitingQueueTime + process.ioQueueTime) - 1
 
                     self.update_messages(
-                        f"{clock_tick}, job {process.pid} exited. Total completion time --> {process.processTime} --> Queue Time: {process.queueTime}",
+                        f"{clock_tick}, job {process.pid} exited. ST --> {process.arrivalTime} TAT --> {process.processTime}",
                         clock_tick, style="red"
                     )
                     process.timeExited = clock_tick
@@ -302,7 +305,7 @@ class Scheduler:
                     # remove any processes from 'running' that were marked for removal.
             self.running = [x for x in self.running if x.pid not in removed] 
 
-    def schedule(self, mode:str="FCFS", time_slice:int=10):
+    def schedule(self, mode:str="FCFS", time_slice:int=10, speed:float=0.1):
         '''
         Given a mode and loaded PCBs from readData use one of the available
         scheduling algorithms to process the PCBs to completion. 
@@ -320,15 +323,15 @@ class Scheduler:
         self.total_processed = 0
         start = self.clock.time()
 
-        # Run the FCFS scheduling algorithm while showing a graphical representation.
+        # Run the scheduling algorithm while showing a visual representation with 'rich'.
         with Live(RenderScreen(self.new, self.ready, self.running, self.waiting, self.IO, 
                                self.exited, 0, self.messages), refresh_per_second=10) as live:
+            # run until all of the processes are all in exited. 
             while self.total_processed < total_processes:  
-            # load the PCB's into new queue based off of the clock time
+                # load the PCB's into new queue based off of the clock time
                 tick = self.clock.time()
                 self.load_new(tick)
                     
-                
                 if mode == "FCFS":
                     self.load_ready(tick)
                     self.load_waiting(tick)
@@ -343,22 +346,22 @@ class Scheduler:
                 self.CPU_tick(tick)
                 self.IO_tick()
                     
-
-                time.sleep(.0001)
-
+                time.sleep(speed)
                 self.clock.tick()
+
                 # update the simulation.
                 live.update(RenderScreen(self.new, self.ready, self.running, 
                                          self.waiting, self.IO, self.exited, tick, self.messages))
         
         end = self.clock.time()
-        # print(f"total time: {(end - start) - 1}")
         RenderStats(self.exited, ((end - start) - 1), self.cores, self.io_devices, mode)
 
 
 if __name__=='__main__':
-    scheduler = Scheduler(cores=1, io_devices=4)
-    scheduler.readData("processes.dat")
+    pass
+    # Examples use cases.
+    # scheduler = Scheduler(cores=1, io_devices=1)
+    # scheduler.readData("processes.dat")
     # scheduler.schedule(mode="FCFS")
-    scheduler.schedule(mode="PB")
+    # scheduler.schedule(mode="PB", speed=0.00001) # very fast
     # scheduler.schedule(mode="RR", time_slice=4)

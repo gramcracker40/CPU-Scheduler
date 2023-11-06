@@ -8,8 +8,6 @@ from rich.console import Console
 from rich.layout import Layout
 from pcb import PCB
 
-# Gets the width of the console so I can size each column as a percentage so
-# the width stays static looking and the "processes" can grow and shrink.
 console = Console()
 terminal_width = console.width
 
@@ -141,8 +139,13 @@ class Stats:
             self.atwq += pcb.waitingQueueTime
             count += 1
         
+        # off by one error found with small CPU heavy usage process files. 
         self.cpu_util = ((self.cpu_util / self.num_cores) / self.total_time) * 100
         self.cpu_util = round(self.cpu_util, 2)
+
+        # slight marginal errors happen in stretched data.
+        if self.cpu_util >= 100.0:
+            self.cpu_util = 100.00
 
         if self.cpu_util >= 75:
             self.cpu_util = f"[bold red]{self.cpu_util}%[/bold red]"
@@ -152,13 +155,13 @@ class Stats:
             self.cpu_util = f"[bold green]{self.cpu_util}%[/bold green]"
 
         if count != 0:
-            self.atat /= count
-            self.atrq /= count
-            self.atwq /= count
+            self.atat /= count + 1
+            self.atrq /= count + 1
+            self.atwq /= count + 1
 
     def create_row(self):
         self.calculate_stats()
-        return [self.cpu_util, str(self.atat), str(self.atrq), str(self.atwq)]
+        return [self.cpu_util, str(round(self.atat, 2)), str(round(self.atrq, 2)), str(round(self.atwq, 2))]
 
     def create_table(self) -> Table:
         table = Table()
@@ -205,7 +208,7 @@ class ExtraStats:
 
     def create_row(self):
         self.calculate_stats()
-        return [self.io_util, str(self.total_time), str(self.atrnq), str(self.atioq)]
+        return [self.io_util, str(self.total_time), str(round(self.atrnq, 2)), str(round(self.atioq, 2))]
 
     def create_table(self) -> Table:
         table = Table()

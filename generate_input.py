@@ -17,7 +17,6 @@ class WeightedPriorities:
         self.choiceType = choiceType
         self.priorityChoiceList = []
         self.generateWeightedPriority(choiceType)
-
         self.nextPriority = 0  # index to walk through priorityChoiceList
 
     def generateWeightedPriority(self, customWeights=None):
