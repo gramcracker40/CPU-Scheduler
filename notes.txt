@@ -1,10 +1,1 @@
-First come first serve  --> no preemption, implement priority
-round robin             --> time slice = N
-
-queues to implement: new, ready, running, waiting
-
-new --> ready
-ready --> running
-running --> waiting
-waiting --> ready
-
+STATS

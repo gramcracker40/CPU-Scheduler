@@ -81,7 +81,7 @@ class Scheduler:
                     arrival, pid = int(parts[0]), parts[1]
                     priority, bursts = int(parts[2][1]), parts[3:]
 
-                    print(f"Arrival ::: Type {type(arrival)}")
+                    # print(f"Arrival ::: Type {type(arrival)}")
                     bursts = [int(i) for i in bursts]
 
                     if arrival in self.pcb_arrivals:
@@ -89,7 +89,7 @@ class Scheduler:
                     else:
                         self.pcb_arrivals[arrival] = [PCB(pid, priority, bursts, arrival)]
     
-        print(f"self.pcb_arrivals\n{self.pcb_arrivals}\n{self.pcb_arrivals[0]}")
+        # print(f"self.pcb_arrivals\n{self.pcb_arrivals}\n{self.pcb_arrivals[0]}")
     
     def update_messages(self, message:str, tick:int, style="green"):
         '''
@@ -126,7 +126,7 @@ class Scheduler:
         return index of PCB with highest priority
         '''
         highest_priority = -1
-        for count, p in enumerate(self.ready):
+        for count, p in enumerate(queue):
             if p.priority > highest_priority:
                 highest_priority = count
         return highest_priority
@@ -155,7 +155,9 @@ class Scheduler:
                 if mode == "FCFS":
                     process = self.ready.pop(0)
                 elif mode == "PB":
-                    process = self.ready.pop(self.find_highest_priority(self.ready))
+                    highest = self.find_highest_priority(self.ready)
+                    if highest != -1:
+                        process = self.ready.pop(highest)
                 elif mode == "RR":
                     process = self.ready.pop(0)
                     self.time_slice_tracker[process.pid] = clock_tick
@@ -183,7 +185,9 @@ class Scheduler:
                 if mode == "FCFS":
                     process = self.waiting.pop(0)
                 elif mode == "PB":
-                    process = self.waiting.pop(self.find_highest_priority(self.waiting))
+                    highest = self.find_highest_priority(self.waiting)
+                    if highest != -1:
+                        process = self.waiting.pop(highest)
                 self.update_messages(
                     f"{clock_tick}, job {process.pid} began running {process.ioBurst} IO bursts, {process.currBurstIndex}/{process.totalBursts}", 
                     clock_tick, style="bright_magenta"
@@ -297,7 +301,7 @@ class Scheduler:
                 
                 self.IO_tick()
             
-                time.sleep(0.01)
+                time.sleep(0.0001)
 
                 self.clock.tick()
                 # update the simulation.
@@ -305,8 +309,8 @@ class Scheduler:
                                          self.waiting, self.IO, self.exited, tick, self.messages))
         
         end = self.clock.time()
-        print(f"total time: {(end - start) - 1}")
-        RenderStats(self.exited)
+        # print(f"total time: {(end - start) - 1}")
+        RenderStats(self.exited, ((end - start) - 1), self.cores, self.io_devices, mode)
 
     def FCFS(self):
         '''
@@ -332,7 +336,7 @@ class Scheduler:
                 self.CPU_tick(tick) 
                 self.IO_tick()
             
-                time.sleep(0.01)
+                time.sleep(0.001)
 
                 self.clock.tick()
                 # update the simulation.
@@ -340,8 +344,8 @@ class Scheduler:
                                          self.waiting, self.IO, self.exited, tick, self.messages))
         
         end = self.clock.time()
-        print(f"total time: {(end - start) - 1}")
-        RenderStats(self.exited)
+        # print(f"total time: {(end - start) - 1}")
+        RenderStats(self.exited, ((end - start) - 1), self.cores, self.io_devices, "FCFS")
 
     def PB(self):
         '''
@@ -379,10 +383,10 @@ class Scheduler:
                                          self.waiting, self.IO, self.exited, tick, self.messages))
 
         end = self.clock.time()
-        print(f"total time: {(end - start) - 1}")
+        # print(f"total time: {(end - start) - 1}")
         RenderStats(self.exited)
 
 if __name__=='__main__':
-    scheduler = Scheduler(cores=1, io_devices=4)
-    scheduler.readData("processes.dat")
-    scheduler.FCFS()
+    scheduler = Scheduler(cores=20, io_devices=20)
+    scheduler.readData("datafile.dat")
+    scheduler.schedule(mode="PB")
