@@ -50,3 +50,14 @@ Remaining Burst Time: {self.remainingBurst}"""
     def getCurrentBurstTime(self):
         return int(self.bursts[self.currBurstIndex])
 
+
+class SysClock:
+    def __init__(self):
+        self.clock = 0
+    
+    def tick(self):
+        self.clock += 1
+
+    def time(self):
+        return self.clock
+    

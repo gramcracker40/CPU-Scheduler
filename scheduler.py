@@ -4,38 +4,25 @@ import time
 from rich.live import Live
 from sim_viewer import RenderScreen
 from sim_viewer import RenderStats
-from pcb import PCB
-
-# from sim import RenderScreen
-
-class SysClock:
-    def __init__(self):
-        self.clock = 0
-    
-    def tick(self):
-        self.clock += 1
-
-    def time(self):
-        return self.clock
-    
+from pcb import PCB, SysClock
 
 class Scheduler:
     '''
     Handles the life cycle of the CPU scheduling simulation
+
     
     The CPU Scheduler can run on either a 
         FCFS first come first serve basis
         a Round Robin approach 
         or a priority based approach
 
+        see schedule() for more info on scheduling algorithms
+
     The simulated CPU has 2 cores by default but can be changed. 
     the number of cores is the allowed number of processes in the running queue at once. 
     
-    The simulated runtime environment only has 2 'io_devices' at a tim, 
-        this handles input/output between calculations in the CPU
-
-    self.new --> the 'new' processes, based off the PCB's arrival time.
-    self.ready --> the 'ready' processes, added by load_ready according to the number of cores
+    The simulated runtime environment only has 2 'io_devices' by default but can also be changed., 
+    this handles input/output between calculations between CPU bursts
     
     '''
     def __init__(self, cores:int=2, io_devices:int=2):
@@ -49,6 +36,7 @@ class Scheduler:
         self.pcb_arrivals = {}
         self.messages = []
         self.time_slice_tracker = {}
+        self.highest_priority = 10000
         
         self.new = []
         self.ready = []
@@ -104,17 +92,16 @@ class Scheduler:
     def find_highest_priority(self, queue):
         '''
         helper func
-        return index of PCB with highest priority
+        return index of PCB inside of queue with the highest priority
         '''
-        highest_priority = -1
+        highest_priority = (self.highest_priority, -1)
         for count, p in enumerate(queue):
-            if p.priority > highest_priority:
-                highest_priority = count
-        return highest_priority
+            if p.priority < highest_priority[0]:
+                highest_priority = [p.priority, count]
+        return highest_priority[1]
     
     def check_slice_tracker(self, clock_tick:int, time_slice:int):
         '''
-        helper func 
         for Round Robin scheduling. 
 
         handles all Round Robin functionality in schedule()
@@ -126,43 +113,39 @@ class Scheduler:
         '''
         to_remove = []
         for process in self.time_slice_tracker:
-            #print(f"Process: {type(process)}")
+            # time entered and the queue name the pcb entered into. Either
             t_entered = self.time_slice_tracker[process][0]
             queue = self.time_slice_tracker[process][1]
-            #print(f"Job {process} Time entered: {t_entered}, Queue: {queue}")
+
             # time to switch PCB receiving resources 
             if t_entered + time_slice <= clock_tick: 
                 temp = -1
                 if queue == "io":
                     # find the process PCB object in IO.
-                    #print(f"IO : {self.IO}")
                     for each in self.IO:
-                        #print(type(each.pid))
                         if each.pid == process:
                             temp = each
                     if temp == -1: # the process was removed mid IO burst
-                        break
+                        break      # break out, the process has already been handled.
                     # remove the process from IO and add to waiting
                     self.IO = [p for p in self.IO if p.pid != temp.pid]
                     self.waiting.append(temp)
                 else: # running
                     # find the process PCB object in running.
-                    #print(f"running: {self.running}") 
                     for each in self.running:
                         if each.pid == process:
                             temp = each
                     if temp == -1: # the process was removed mid CPU burst
-                        break
-                    # remove the PCB from running and add to waiting or ready. 
+                        break 
+                    # remove the PCB from running and add to ready. 
                     self.running = [p for p in self.running if p.pid != temp.pid]
                     self.ready.append(temp)
-                
+                # mark the process for removal from time_slice_tracker
                 to_remove.append(process)
-                # remove the process from time_slice_tracker
-        
+                
+        # remove any non active slice tracking objects.
         if to_remove:
             for p in to_remove:
-                #print(f"removed job --> {p}")
                 del self.time_slice_tracker[p]
 
 
@@ -179,7 +162,6 @@ class Scheduler:
                 )
         except KeyError:
             pass
-        #print(self.new)
       
     
     def load_ready(self, clock_tick:int, mode:str="FCFS"):
@@ -230,7 +212,7 @@ class Scheduler:
         diff = self.io_devices - len(self.IO)
 
         while diff > 0 and self.waiting:       # if there is a difference
-            if len(self.waiting) >= 1:         # if there are any waiting
+            if len(self.waiting) >= 1:         # if there are any waiting, assign them immediately based off 'mode'
                 if mode == "FCFS":
                     process = self.waiting.pop(0)
                 elif mode == "PB":
@@ -238,6 +220,7 @@ class Scheduler:
                 elif mode == "RR":
                     process = self.waiting.pop(0)
                     self.time_slice_tracker[process.pid] = (clock_tick, "io")
+                # update the message section
                 self.update_messages(
                     f"{clock_tick}, job {process.pid} began running {process.ioBurst} IO bursts, {process.currBurstIndex}/{process.totalBursts}", 
                     clock_tick, style="bright_magenta"
@@ -320,10 +303,15 @@ class Scheduler:
     def schedule(self, mode:str="FCFS", time_slice:int=10):
         '''
         Given a mode and loaded PCBs from readData use one of the available
-            scheduling algorithms to process the PCBs to completion. 
+        scheduling algorithms to process the PCBs to completion. 
+
+        Available scheduling algorithms --> \n
+            # 'FCFS' - First come first serve
+            # 'RR' - Round Robin, you can also change the 'time_slice'
+            # 'PB' - Priority Based, scheduled based off of highest priority. 
 
             will also show the simulation of the running processes in the various
-            queue using the various methods. 
+            queues using the various methods in __name__ == '__main__'. 
         ''' 
         total_processes = self.get_total_new_processes()
 
@@ -354,7 +342,7 @@ class Scheduler:
                 self.IO_tick()
                     
 
-                time.sleep(1)
+                time.sleep(.0001)
 
                 self.clock.tick()
                 # update the simulation.
@@ -365,81 +353,10 @@ class Scheduler:
         print(f"total time: {(end - start) - 1}")
         RenderStats(self.exited)
 
-    def FCFS(self):
-        '''
-        does a first come first serve algorithm on the CPU's 'new' processes
-        does not switch until the cpu burst is complete. 
-        running state holds number of cores set in __init__
-        '''
-        total_processes = self.get_total_new_processes()
-
-        self.total_processed = 0
-        start = self.clock.time()
-
-        
-        # Run the FCFS scheduling algorithm while showing a graphical representation.
-        with Live(RenderScreen(self.new, self.ready, self.running, self.waiting, self.IO, 
-                               self.exited, 0, self.messages), refresh_per_second=10) as live:
-            while self.total_processed < total_processes:  
-            # load the PCB's into new queue based off of the clock time
-                tick = self.clock.time()
-                self.load_new(tick)
-                self.load_ready(tick)
-                self.load_waiting(tick)
-                self.CPU_tick(tick) 
-                self.IO_tick()
-            
-                time.sleep(0.01)
-
-                self.clock.tick()
-                # update the simulation.
-                live.update(RenderScreen(self.new, self.ready, self.running, 
-                                         self.waiting, self.IO, self.exited, tick, self.messages))
-        
-        end = self.clock.time()
-        print(f"total time: {(end - start) - 1}")
-        RenderStats(self.exited)
-
-    def PB(self):
-        '''
-        Priority Based
-        Runs the sheduler with the loaded processes in a priority based fashion. 
-        
-        The higher the processes priority, the more preference it has in being chosen to 
-        go into the 'running' or 'IO' queues from the 'ready' and 'waiting' queues. 
-        
-        Shows that a priority based approach could be better for handling background noise
-        and allowing a user to navigate the computer more efficiently.
-        '''
-        total_processes = self.get_total_new_processes()
-
-        self.total_processed = 0
-        start = self.clock.time()
-
-        # Run the FCFS scheduling algorithm while showing a graphical representation.
-        with Live(RenderScreen(self.new, self.ready, self.running, self.waiting, self.IO, 
-                               self.exited, 0, self.messages), refresh_per_second=10) as live:
-            while self.total_processed < total_processes:  
-            # load the PCB's into new queue based off of the clock time
-                tick = self.clock.time()
-                self.load_new(tick)
-                self.CPU_tick(tick) 
-                self.load_ready(tick, mode="PB")
-                self.IO_tick()
-                self.load_waiting(tick, mode="PB")
-            
-                time.sleep(0.01)
-
-                self.clock.tick()
-                # update the simulation.
-                live.update(RenderScreen(self.new, self.ready, self.running, 
-                                         self.waiting, self.IO, self.exited, tick, self.messages))
-
-        end = self.clock.time()
-        print(f"total time: {(end - start) - 1}")
-        RenderStats(self.exited)
 
 if __name__=='__main__':
     scheduler = Scheduler(cores=1, io_devices=4)
     scheduler.readData("processes.dat")
-    scheduler.schedule(mode="RR", time_slice=4)
+    # scheduler.schedule(mode="FCFS")
+    scheduler.schedule(mode="PB")
+    # scheduler.schedule(mode="RR", time_slice=4)
