@@ -57,13 +57,6 @@ class Scheduler:
         self.IO = []
         self.exited = []
 
-    def get_total_new_processes(self):
-        '''
-        grabs number of total processes in self.pcb_arrivals for scheduling type to process.
-        '''
-        return len([each for x in self.pcb_arrivals for each in self.pcb_arrivals[x]])
-    
-    
     def readData(self, datfile):
         '''
         handles all .dat files produced for simulation.
@@ -79,25 +72,100 @@ class Scheduler:
                     parts = process.split(' ')
                     
                     arrival, pid = int(parts[0]), parts[1]
-                    priority, bursts = int(parts[2][1]), parts[3:]
-
-                    print(f"Arrival ::: Type {type(arrival)}")
-                    bursts = [int(i) for i in bursts]
+                    priority, bursts = int(parts[2][1]), [int(i) for i in parts[3:]]
 
                     if arrival in self.pcb_arrivals:
                         self.pcb_arrivals[arrival].append(PCB(pid, priority, bursts, arrival))
                     else:
                         self.pcb_arrivals[arrival] = [PCB(pid, priority, bursts, arrival)]
     
-        print(f"self.pcb_arrivals\n{self.pcb_arrivals}\n{self.pcb_arrivals[0]}")
+    def get_total_new_processes(self):
+        '''
+        helper func
+        grabs number of total processes in self.pcb_arrivals for scheduling type to process.
+        '''
+        return len([each for x in self.pcb_arrivals for each in self.pcb_arrivals[x]])
     
     def update_messages(self, message:str, tick:int, style="green"):
         '''
+        helper func
         pass a message to add to messages
         pass the Live object from Rich app so the update can occur.
         '''
         self.messages.insert(0, {"message": message, "style": style})
+
+    def new_to_ready(self):
+        '''
+        helper func
+        '''
+        for _ in range(len(self.new)):
+            self.ready.append(self.new.pop(0))
+
+    def find_highest_priority(self, queue):
+        '''
+        helper func
+        return index of PCB with highest priority
+        '''
+        highest_priority = -1
+        for count, p in enumerate(queue):
+            if p.priority > highest_priority:
+                highest_priority = count
+        return highest_priority
+    
+    def check_slice_tracker(self, clock_tick:int, time_slice:int):
+        '''
+        helper func 
+        for Round Robin scheduling. 
+
+        handles all Round Robin functionality in schedule()
         
+        checks all active slices created by load_waiting() and load_ready()
+        
+        removes PCBs from 'running' and 'io' if they have been in the queue
+        for the given round robin time slice. 
+        '''
+        to_remove = []
+        for process in self.time_slice_tracker:
+            #print(f"Process: {type(process)}")
+            t_entered = self.time_slice_tracker[process][0]
+            queue = self.time_slice_tracker[process][1]
+            #print(f"Job {process} Time entered: {t_entered}, Queue: {queue}")
+            # time to switch PCB receiving resources 
+            if t_entered + time_slice <= clock_tick: 
+                temp = -1
+                if queue == "io":
+                    # find the process PCB object in IO.
+                    #print(f"IO : {self.IO}")
+                    for each in self.IO:
+                        #print(type(each.pid))
+                        if each.pid == process:
+                            temp = each
+                    if temp == -1: # the process was removed mid IO burst
+                        break
+                    # remove the process from IO and add to waiting
+                    self.IO = [p for p in self.IO if p.pid != temp.pid]
+                    self.waiting.append(temp)
+                else: # running
+                    # find the process PCB object in running.
+                    #print(f"running: {self.running}") 
+                    for each in self.running:
+                        if each.pid == process:
+                            temp = each
+                    if temp == -1: # the process was removed mid CPU burst
+                        break
+                    # remove the PCB from running and add to waiting or ready. 
+                    self.running = [p for p in self.running if p.pid != temp.pid]
+                    self.ready.append(temp)
+                
+                to_remove.append(process)
+                # remove the process from time_slice_tracker
+        
+        if to_remove:
+            for p in to_remove:
+                #print(f"removed job --> {p}")
+                del self.time_slice_tracker[p]
+
+
     def load_new(self, clock_tick:int):
         '''
         load the new queue with PCBs according to the current clock tick.
@@ -112,24 +180,7 @@ class Scheduler:
         except KeyError:
             pass
         #print(self.new)
-
-    def new_to_ready(self):
-        '''
-        TODO: helper func
-        '''
-        for _ in range(len(self.new)):
-            self.ready.append(self.new.pop(0))
-
-    def find_highest_priority(self, queue):
-        '''
-        TODO: helper func
-        return index of PCB with highest priority
-        '''
-        highest_priority = -1
-        for count, p in enumerate(self.ready):
-            if p.priority > highest_priority:
-                highest_priority = count
-        return highest_priority
+      
     
     def load_ready(self, clock_tick:int, mode:str="FCFS"):
         '''
@@ -158,7 +209,7 @@ class Scheduler:
                     process = self.ready.pop(self.find_highest_priority(self.ready))
                 elif mode == "RR":
                     process = self.ready.pop(0)
-                    self.time_slice_tracker[process.pid] = clock_tick
+                    self.time_slice_tracker[process.pid] = (clock_tick, "running")
                 self.update_messages(
                     f"{clock_tick}, job {process.pid}, priority {process.priority} began running {process.cpuBurst} CPU bursts, burst: {process.currBurstIndex}/{process.totalBursts}", 
                     clock_tick, style="cyan"
@@ -184,6 +235,9 @@ class Scheduler:
                     process = self.waiting.pop(0)
                 elif mode == "PB":
                     process = self.waiting.pop(self.find_highest_priority(self.waiting))
+                elif mode == "RR":
+                    process = self.waiting.pop(0)
+                    self.time_slice_tracker[process.pid] = (clock_tick, "io")
                 self.update_messages(
                     f"{clock_tick}, job {process.pid} began running {process.ioBurst} IO bursts, {process.currBurstIndex}/{process.totalBursts}", 
                     clock_tick, style="bright_magenta"
@@ -246,8 +300,8 @@ class Scheduler:
                 else: # if it is the last burst
                     process.processTime = clock_tick - process.arrivalTime
 
-                    process.queueTime = process.readyQueueTime + process.runningQueueTime \
-                            + process.waitingQueueTime + process.ioQueueTime
+                    process.queueTime = (process.readyQueueTime + process.runningQueueTime \
+                            + process.waitingQueueTime + process.ioQueueTime) - 1
 
                     self.update_messages(
                         f"{clock_tick}, job {process.pid} exited. Total completion time --> {process.processTime} --> Queue Time: {process.queueTime}",
@@ -283,21 +337,24 @@ class Scheduler:
             # load the PCB's into new queue based off of the clock time
                 tick = self.clock.time()
                 self.load_new(tick)
+                    
+                
                 if mode == "FCFS":
                     self.load_ready(tick)
-                elif mode == "PB":
-                    self.load_ready(tick, mode="PB")
-                
-                self.CPU_tick(tick) 
-
-                if mode == "FCFS":
                     self.load_waiting(tick)
                 elif mode == "PB":
+                    self.load_ready(tick, mode="PB")
                     self.load_waiting(tick, mode="PB")
-                
+                elif mode == "RR":
+                    self.check_slice_tracker(tick, time_slice)
+                    self.load_ready(tick, mode="RR")
+                    self.load_waiting(tick, mode="RR")
+
+                self.CPU_tick(tick)
                 self.IO_tick()
-            
-                time.sleep(0.01)
+                    
+
+                time.sleep(1)
 
                 self.clock.tick()
                 # update the simulation.
@@ -385,4 +442,4 @@ class Scheduler:
 if __name__=='__main__':
     scheduler = Scheduler(cores=1, io_devices=4)
     scheduler.readData("processes.dat")
-    scheduler.FCFS()
+    scheduler.schedule(mode="RR", time_slice=4)
