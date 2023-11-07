@@ -17,7 +17,7 @@ pip install -r requirements.txt
 Once the necessary packages are installed, you can execute the simulation with the following command:
 
 ```bash
-python sim.py --help
+python sim.py test_data/IOS.dat --cpus 2 --ios 2 --sched="FCFS" --speed=0.1
 ```
 
 This command will provide comprehensive information about the available options and arguments for running the simulation.
