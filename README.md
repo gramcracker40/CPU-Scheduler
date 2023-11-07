@@ -22,6 +22,9 @@ python sim.py --help
 
 This command will provide comprehensive information about the available options and arguments for running the simulation.
 
+### Example Runs
+![Example Run IMG](test_data/example_run.png)
+
 
 ## Getting Started
 
