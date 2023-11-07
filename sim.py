@@ -1,6 +1,7 @@
 '''
 Command Line tools for the CPU Scheduler simulation. 
-python sim.py --help for usage
+python sim.py --help for usage.
+Processes passed as a input file should follow the patterns found in test_data.
 '''
 
 import argparse

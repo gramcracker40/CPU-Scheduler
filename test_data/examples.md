@@ -2,7 +2,7 @@
 
 # FCFS examples
 ### Small
-python sim.py test_data/CPUS.dat --cpus 2 --ios 2 --sched="FCFS" --speed=0.1
+python sim.py test_data/CPUS.dat --cpus 2 --ios 2 --sched="FCFS" --speed=0.1 --csv_file="CPU_HEAVY_SMALL"
 python sim.py test_data/IOS.dat --cpus 2 --ios 2 --sched="FCFS" --speed=0.1
 ### Medium
 python sim.py test_data/CPUM.dat --cpus 8 --ios 10 --sched="FCFS" --speed=0.0001
