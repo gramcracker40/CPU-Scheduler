@@ -20,7 +20,8 @@ Once the necessary packages are installed, you can execute the simulation with t
 python sim.py test_data/IOS.dat --cpus 2 --ios 2 --sched="FCFS" --speed=0.1
 ```
 
-### Example Runs
+
+### Example Run of simulation
 ![Example Run IMG](test_data/example_run.png)
 
 
